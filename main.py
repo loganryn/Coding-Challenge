@@ -3,14 +3,16 @@ from random import randint
 
 #Global variables to control the pausing and which screen to show. They define a basic state machine, with room for additional states to be added.
 frozen = False
-theme = "snowy"
+theme = "snowy" #Supported: ["snowy", "city"]
 
-
+#Helper function for colors
 def _from_rgb(rgb): # https://stackoverflow.com/questions/51591456/can-i-use-rgb-in-tkinter
     """translates an rgb tuple of int to a tkinter friendly color code"""
     return "#%02x%02x%02x" % rgb
 
-
+##################
+# Style Functions
+##################
 def backgrounds(canvas, theme):
     # Draw Background Gradient
     if theme is "snowy":  #Dark Blue
@@ -19,8 +21,7 @@ def backgrounds(canvas, theme):
     else: #Dusty Orange
         for i in range (-10, 520, 5):
             canvas.create_oval(-400, i, 1200, 100+i, fill=_from_rgb((10+int(i/3), 6+int(i/5),  0)), outline='')
-
-            
+          
 def foregrounds(canvas, theme):
     # Create Foreground Texture
     if theme is "snowy": #White Snowfall
@@ -45,8 +46,7 @@ def foregrounds(canvas, theme):
                 h = randint(0, 5)
                 building = [i]  #Start the next one adjacent to this one
                 building.append(400+20*h)
-
-              
+   
 def Landscape(canvas, style, part_system_size, xrange, yrange, part_size):
     #This function sets up the theme and initializes the particle system
     #supported styles: "snowy" & "city"
@@ -64,6 +64,9 @@ def Landscape(canvas, style, part_system_size, xrange, yrange, part_size):
     foregrounds(canvas, style)
     return canvas
 
+#########################
+# Particle System Engine 
+#########################
 class ParticleSystem:
     def __init__(self, canvas, system_size, xrange, yrange, particle_size, particle_class, particles = None, collisions=False):
         self.particles = [] if particles is None else particles
@@ -89,7 +92,6 @@ class ParticleSystem:
             else:     
                particle.update()
             
-         
 class Particle: 
     def __init__(self, canvas, x, y, vx=0, vy=0):
         self.x = x
@@ -113,7 +115,9 @@ class Particle:
         self.vx = self.vx + ax
         self.vy = self.vy + ay
 
-
+#################
+# Instantiations
+#################
 class Snowflake(Particle):
     def __init__(self, canvas, x, y, size, rgb = None):
         super().__init__(canvas, x, y)
@@ -200,7 +204,7 @@ class Firework(Particle):
             self.canvas.delete(self.particle)
 
          
-class explode:
+class explode(ParticleSystem):
     def __init__(self, canvas, x1, y1):
         self.x1 = x1
         self.y1 = y1
@@ -216,10 +220,12 @@ class explode:
         for flake in snowflakes:
             flake.move_xplosion()
 
-
+#################
+# GUI Code
+#################
 def pause():
     global frozen
-    global stop_time
+    global stop_time #button label
     frozen = not frozen
 
     if frozen:
@@ -231,6 +237,7 @@ def switch_screen():
     global theme
     canvas.delete("all") #remove any left over objects
     
+    #State machine behavior defined here
     if theme is "snowy": 
         theme = "city"
         Landscape(canvas, style=theme, part_system_size=3, xrange=(100,700), yrange=(500, 500), part_size=5) 
@@ -247,12 +254,14 @@ root.resizable(False,False)
 canvas = Canvas(root, width = 800, height = 500)
 canvas.pack()
 
+#Create starter image
 Landscape(canvas, style=theme, part_system_size=50, xrange=(0,800), yrange=(-10,490), part_size=7)
+#Create GUI buttons
 txt = 'Pause'
 stop_time = Button(root, text=txt, command = pause, width=50)
 stop_time.pack(side=LEFT)
 switch = Button(root, text='Switch', command = switch_screen, width = 50)
 switch.pack(side=RIGHT)
 
-
+#Run indefinitely
 root.mainloop()
