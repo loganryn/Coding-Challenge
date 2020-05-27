@@ -52,43 +52,84 @@ def Landscape(canvas, style, part_system_size, xrange, yrange, part_size):
     #supported styles: "snowy" & "city"
     backgrounds(canvas, style)
     
-    particles = []
-    for i in range(0, part_system_size):
-        loc = randint(xrange[0], xrange[1]) #Scatter around screen 
-        h = randint(yrange[0], yrange[1])
-        size = part_size
-        if style is "snowy":
-            particles.append(Snowflake(canvas, loc, h, loc+size, h+size))
-        else: 
-            particles.append(Firework(canvas, loc, h, loc+size, h+size))
-
-    for particle in particles:
-        particle.update()
+    if style is "snowy":
+        P = ParticleSystem(canvas, part_system_size, xrange, yrange, part_size, Snowflake)
+    elif style is "city":
+        P = ParticleSystem(canvas, part_system_size, xrange, yrange, part_size, Firework)
+    else:
+        print("style not yet supported")
+        
+    P.update()
 
     foregrounds(canvas, style)
     return canvas
 
-
-class Snowflake:
-    def __init__(self, canvas, x1, y1, x2, y2, rgb = None):
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-        self.spd = randint(5, 15) # controlls fall speed and opacity. brighter objects are 'closer' and fall faster 
+class ParticleSystem:
+    def __init__(self, canvas, system_size, xrange, yrange, particle_size, particle_class, particles = None, collisions=False):
+        self.particles = [] if particles is None else particles
+        self.system_size = system_size
+        self.collisions = collisions
+        self.xrange = xrange
+        self.yrange = yrange
         self.canvas = canvas
+        
+        #Instantiate particles
+        for i in range(0, self.system_size):
+            loc = randint(xrange[0], xrange[1]) #Scatter around screen 
+            h = randint(yrange[0], yrange[1])
+            self.particles.append(particle_class(self.canvas, loc, h, particle_size))
+    
+    #Update Particles
+    def update(self):
+        for p, particle in enumerate(self.particles):
+            if self.collisions: #account for collisions, not used in this example
+                for particle2 in self.particles[p:]:
+                    if particle.x == particle2.x and particle.y == particle2.y:
+                        print('collisions not implemented')
+            else:     
+               particle.update()
+            
+         
+class Particle: 
+    def __init__(self, canvas, x, y, vx=0, vy=0):
+        self.x = x
+        self.y = y
+        self.canvas = canvas
+        
+        self.vx = vx
+        self.vy = vy
+        self.ax = 0
+        self.ay = 0
+        
+        self.particle = self.canvas.create_oval(self.x, self.y, self.x+1, self.y+1, fill='black', outline='')
+        
+    def update(self, ax=0, ay=0):
+        deltax = self.vx
+        deltay = self.vy
+        self.canvas.move(self.particle, deltax, deltay)
+        
+        self.x = self.x + self.vx
+        self.y = self.y + self.vy
+        self.vx = self.vx + ax
+        self.vy = self.vy + ay
+
+
+class Snowflake(Particle):
+    def __init__(self, canvas, x, y, size, rgb = None):
+        super().__init__(canvas, x, y)
+        self.spd = randint(5, 15) # controlls fall speed and opacity. brighter objects are 'closer' and fall faster 
         self.rgb = rgb # controls color if needed
-        self.particle = canvas.create_oval(self.x1, self.y1, self.x2, self.y2, fill=_from_rgb((150+self.spd*5, 150+self.spd*5, 150+self.spd*5)), outline='')
+        self.particle = canvas.create_oval(self.x, self.y, self.x+size, self.y+size, fill=_from_rgb((150+self.spd*5, 150+self.spd*5, 150+self.spd*5)), outline='')
 
     def update(self):
         deltax = 0 if frozen else randint(-1,1)/10.0 #slight swaying 
         deltay = 0 if frozen else self.spd/100.0 #falling
 
         #recycle snowflake to top of screen
-        self.y1 = self.y1 + deltay
-        if  self.y1 >=500:
+        self.y = self.y + deltay
+        if  self.y >=500:
             deltay = -510
-            self.y1 = self.y1 + deltay
+            self.y = self.y + deltay
             self.spd = randint(5, 15)
 
         self.canvas.move(self.particle, deltax, deltay)
@@ -116,42 +157,40 @@ class Snowflake:
             self.canvas.delete(self.particle)
 
             
-class Firework:
-    def __init__(self, canvas, x1, y1, x2, y2):
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
+class Firework(Particle):
+    def __init__(self, canvas, x, y, size, rgb = None):
+        super().__init__(canvas, x, y)
+        self.rgb = rgb # controls color if needed
         self.spd = randint(-90, -70)
         self.delay = randint(0, 100)
         self.canvas = canvas
-        self.particle = canvas.create_oval(self.x1, self.y1, self.x2, self.y2, fill=_from_rgb((250, 250, 200)), outline='')
+        self.particle = canvas.create_oval(self.x, self.y, self.x+size, self.y+size, fill=_from_rgb((250, 250, 200)), outline='')
 
     def update(self):
         deltax = 0 if frozen else randint(-1,1)/3.0
         deltay = 0 if frozen else self.spd/100.0
 
         #if firework is off screen, move it back to the center
-        if self.x1 < 50:
+        if self.x < 50:
             deltax = 400
-        elif self.x1 > 850:
+        elif self.x > 850:
             deltax = -400
 
         if self.delay > 0: #create a random delay between when this firework explodes, and when it respawns 
             self.delay = self.delay - 0.1
         else:
-            self.x1 = self.x1 + deltax
-            self.y1 = self.y1 + deltay
+            self.x = self.x + deltax
+            self.y = self.y + deltay
             grav = 0 if frozen else 0.1
             self.spd = self.spd + grav  #slow down over time (gravity effect)
             if  self.spd >= 0: #once it has reached the peak, explode and recycle after delay 
-                x = explode(self.canvas, self.x1, self.y1) #create sub-system for explosion
+                x = explode(self.canvas, self.x, self.y) #create sub-system for explosion
                 self.spd = randint(-90,-70)
                 self.delay = randint(50, 100)
                 dx = randint(-200, 200)
-                self.canvas.move(self.particle, dx, 500-self.y1)
-                self.y1 = 500
-                self.x1 = self.x1 + dx
+                self.canvas.move(self.particle, dx, 500-self.y)
+                self.y = 500
+                self.x = self.x + dx
             else:
                 self.canvas.move(self.particle, deltax, deltay)
 
@@ -165,8 +204,6 @@ class explode:
     def __init__(self, canvas, x1, y1):
         self.x1 = x1
         self.y1 = y1
-        self.x2 = x1 +30
-        self.y2 = y1 +30
         self.spd = randint(50, 90)
         self.canvas = canvas
         
@@ -174,7 +211,7 @@ class explode:
         snowflakes = []
         rgb = (randint(0, 255), randint(0, 255), randint(0, 255)) #random colors
         for i in range(0, 12): #12 particles per firework
-            snowflakes.append(Snowflake(canvas, self.x1, self.y1, self.x1+7, self.y1+7, rgb=rgb))
+            snowflakes.append(Snowflake(canvas, self.x1, self.y1, 7, rgb=rgb))
 
         for flake in snowflakes:
             flake.move_xplosion()
