@@ -69,16 +69,17 @@ def Landscape(canvas, style, part_system_size, xrange, yrange, part_size):
 #########################
 class ParticleSystem:
     def __init__(self, canvas, system_size, xrange, yrange, particle_size, particle_class, particles = None, collisions=False):
-        self.particles = [] if particles is None else particles
+        #particle_class is the class defining the specific particle to use. Can be defaulted to Particle()
+        self.particles = [] if particles is None else particles #allow a collection of particles to be added to the system
         self.system_size = system_size
-        self.collisions = collisions
+        self.collisions = collisions #controlls if collision checking is performed. This is not used for these demos
         self.xrange = xrange
         self.yrange = yrange
         self.canvas = canvas
         
         #Instantiate particles
         for i in range(0, self.system_size):
-            loc = randint(xrange[0], xrange[1]) #Scatter around screen 
+            loc = randint(xrange[0], xrange[1]) #Scatter around system boundaries 
             h = randint(yrange[0], yrange[1])
             self.particles.append(particle_class(self.canvas, loc, h, particle_size))
     
@@ -91,6 +92,7 @@ class ParticleSystem:
                         print('collisions not implemented')
             else:     
                particle.update()
+        self.canvas.after(1, self.update)
             
 class Particle: 
     def __init__(self, canvas, x, y, vx=0, vy=0):
@@ -127,7 +129,7 @@ class Snowflake(Particle):
 
     def update(self):
         deltax = 0 if frozen else randint(-1,1)/10.0 #slight swaying 
-        deltay = 0 if frozen else self.spd/100.0 #falling
+        deltay = 0 if frozen else self.spd/50.0 #falling
 
         #recycle snowflake to top of screen
         self.y = self.y + deltay
@@ -139,9 +141,7 @@ class Snowflake(Particle):
         self.canvas.move(self.particle, deltax, deltay)
         
         #continue updating if in the snowy theme, otherwise remove objects 
-        if theme is "snowy":
-            self.canvas.after(1, self.update)
-        else:
+        if theme is not "snowy":
             self.canvas.delete(self.particle)
 
     def move_xplosion(self): #recycling the snowflake particles to use for the fireworks explosion
@@ -198,9 +198,7 @@ class Firework(Particle):
             else:
                 self.canvas.move(self.particle, deltax, deltay)
 
-        if theme is "city":
-            self.canvas.after(1, self.update)
-        else:
+        if theme is not "city":
             self.canvas.delete(self.particle)
 
          
